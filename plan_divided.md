@@ -53,7 +53,7 @@ All four are expected to **use AI heavily** for coding, refactoring, writing pro
 - **Responsibilities**
   - Set up repos, CI basics if easy.
   - Create `.env` templates and LLM config placeholders.
-  - Choose deployment targets (Render/Railway + Vercel/Netlify) and test a “Hello World” deploy.
+  - Choose a simple demo deployment target (Render/Railway for backend, Vercel/Netlify for frontend) and test a “Hello World” deploy for the hackathon demo.
 - **Use AI for**
   - Deployment config, Docker (if needed), environment docs.
 
@@ -96,9 +96,9 @@ All four are expected to **use AI heavily** for coding, refactoring, writing pro
 
 ### Person D – AI & DevOps / Glue
 - **Responsibilities**
-  - Ensure CORS, API URL configs, environment switching (local vs prod).
+  - Ensure CORS and API URL configs for local + demo environment (no production envs).
   - Help B with quick load tests so `/simulate` stays under ~1s.
-  - Keep deployments updated so team can test live URL.
+  - Keep the single demo deployment updated so the team can test the live demo URL.
 - **Use AI for**
   - Writing small load scripts, troubleshooting errors, infra config.
 
@@ -140,7 +140,7 @@ All four are expected to **use AI heavily** for coding, refactoring, writing pro
 ### Person D – AI & DevOps / Glue
 - **Responsibilities**
   - Help design UI micro‑copy: short, sharp labels (e.g., “Failure Forecast”, “Team Stress Index”).
-  - Keep deployments in sync; ensure latency is acceptable from demo location.
+  - Make sure the one demo deployment feels fast enough from the demo location (optimize for perceived speed, not production SLAs).
 - **Use AI for**
   - Generating micro‑copy options and quick UX reviews.
 
@@ -178,8 +178,8 @@ All four are expected to **use AI heavily** for coding, refactoring, writing pro
 
 ### Person D – AI & DevOps / Glue
 - **Responsibilities**
-  - Securely plug in LLM API keys in prod.
-  - Add simple logging for LLM calls.
+  - Plug in LLM API keys in a demo-only `.env` (no production secrets or real user data).
+  - (Optional) Add minimal logging just to debug demo issues (no long-term monitoring stack).
   - Help demo‑proof any flaky API interactions.
 - **Use AI for**
   - Observability snippets, fallback strategies.
@@ -212,7 +212,7 @@ All four are expected to **use AI heavily** for coding, refactoring, writing pro
 
 ### Person D – AI & DevOps / Glue
 - **Responsibilities**
-  - Final deploys; confirm URLs are stable.
+  - Lock in a single demo deployment (or local + tunnel) and confirm it’s reliable enough for the live pitch.
   - Create a **backup demo plan**:
     - Pre‑recorded screen capture in case of Wi‑Fi issues.
     - Local backend fallback if possible.
