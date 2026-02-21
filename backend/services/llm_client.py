@@ -13,14 +13,15 @@ class LLMClient:
     
     def __init__(self):
         self.api_key = os.getenv("LLM_API_KEY")
-        self.model = os.getenv("LLM_MODEL", "gemini-1.5-flash")
+        self.model_name = os.getenv("LLM_MODEL", "gemini-2.5-flash")
         self.client = None
         
         if self.api_key:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=self.api_key)
-                self.client = genai.GenerativeModel(self.model)
+                # Use gemini-2.5-flash (latest fast model)
+                self.client = genai.GenerativeModel(self.model_name)
             except Exception as e:
                 print(f"Warning: Could not initialize Gemini client: {e}")
     
