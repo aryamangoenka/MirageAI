@@ -1,400 +1,207 @@
 """
-LLM Client for Google Gemini API
-Person D - AI & DevOps / Glue Engineer
-Phase 1 (Hours 0-2): Core wrapper ready for integration
-Phase 4 (Hours 12-18): Wire to actual endpoints
+LLM client wrapper for Gemini or other providers.
 """
 
 import os
+from typing import Optional
 import json
-from typing import Optional, Dict, Any, List
-from dataclasses import dataclass
-import google.generativeai as genai
-from dotenv import load_dotenv
-
-load_dotenv()
+import time
 
 
-@dataclass
-class LLMResponse:
-    """Structured response from LLM"""
-    content: str
-    raw_response: Any
-    success: bool
-    error: Optional[str] = None
-
-
-class GeminiClient:
-    """
-    Wrapper for Google Gemini API
-    Optimized for PlanSight hackathon use cases:
-    - Failure Forecast narratives
-    - Executive Summaries
-    - AI Task Breakdowns
-    """
-
-    def __init__(
-        self,
-        api_key: Optional[str] = None,
-        model_name: str = "gemini-1.5-flash"
-    ):
+class LLMClient:
+    """Wrapper for LLM API calls with retries and error handling."""
+    
+    def __init__(self):
+        self.api_key = os.getenv("LLM_API_KEY")
+        self.model_name = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+        self.client = None
+        
+        if self.api_key:
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=self.api_key)
+                # Use gemini-2.5-flash (latest fast model)
+                self.client = genai.GenerativeModel(self.model_name)
+            except Exception as e:
+                print(f"Warning: Could not initialize Gemini client: {e}")
+    
+    def _call_llm(self, prompt: str, retries: int = 2, timeout: float = 10.0) -> Optional[str]:
         """
-        Initialize Gemini client
-
-        Args:
-            api_key: Gemini API key (defaults to GEMINI_API_KEY env var)
-            model_name: Model to use (gemini-1.5-flash for speed, gemini-1.5-pro for quality)
+        Call LLM with retries and error handling.
+        Returns None if LLM is unavailable or fails.
         """
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        self.model_name = model_name
-
-        if not self.api_key or self.api_key == "your_gemini_api_key_here":
-            raise ValueError(
-                "Gemini API key not configured. "
-                "Get one from https://aistudio.google.com/app/apikey"
-            )
-
-        # Configure Gemini
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel(self.model_name)
-
-    def generate(
-        self,
-        prompt: str,
-        temperature: float = 0.7,
-        max_tokens: int = 1024,
-        system_instruction: Optional[str] = None
-    ) -> LLMResponse:
+        if not self.client:
+            return None
+        
+        for attempt in range(retries):
+            try:
+                response = self.client.generate_content(prompt)
+                return response.text
+            except Exception as e:
+                if attempt < retries - 1:
+                    time.sleep(0.5)
+                else:
+                    print(f"LLM call failed after {retries} attempts: {e}")
+                    return None
+        return None
+    
+    def generate_failure_forecast(self, project_context: dict, worst_runs: list, risk_scores: dict) -> dict:
         """
-        Generate text using Gemini API
-
-        Args:
-            prompt: User prompt
-            temperature: Creativity (0.0-1.0, lower = more deterministic)
-            max_tokens: Max response length
-            system_instruction: Optional system/role instruction
-
-        Returns:
-            LLMResponse with content and metadata
+        Generate failure story and mitigations from worst simulation runs.
         """
-        try:
-            generation_config = genai.types.GenerationConfig(
-                temperature=temperature,
-                max_output_tokens=max_tokens,
-                candidate_count=1
-            )
+        prompt = f"""You are a project risk analyst. Based on the following project simulation data, generate a realistic failure forecast.
 
-            # Add system instruction if provided
-            full_prompt = prompt
-            if system_instruction:
-                full_prompt = f"{system_instruction}\n\n{prompt}"
+Project: {project_context['project_name']}
+Description: {project_context['description']}
+Stack: {project_context['stack']}
+Team: {project_context['team_junior']} junior, {project_context['team_mid']} mid, {project_context['team_senior']} senior
+Integrations: {project_context['integrations']}
+Deadline: {project_context['deadline_weeks']} weeks
 
-            response = self.model.generate_content(
-                full_prompt,
-                generation_config=generation_config
-            )
+Risk Scores (0-100):
+- Integration Risk: {risk_scores['integration']}
+- Team Imbalance Risk: {risk_scores['team_imbalance']}
+- Scope Creep Risk: {risk_scores['scope_creep']}
+- Learning Curve Risk: {risk_scores['learning_curve']}
 
-            return LLMResponse(
-                content=response.text,
-                raw_response=response,
-                success=True
-            )
+Simulation results show P90 completion at {worst_runs['p90_weeks']:.1f} weeks vs {project_context['deadline_weeks']} week deadline.
 
-        except Exception as e:
-            return LLMResponse(
-                content="",
-                raw_response=None,
-                success=False,
-                error=str(e)
-            )
+Generate a JSON response with:
+1. "failure_story": array of 3-5 bullet points describing the most likely failure sequence
+2. "mitigations": array of top 3 concrete mitigation actions
 
-    def generate_failure_forecast(
-        self,
-        project_data: Dict[str, Any],
-        risk_scores: Dict[str, float],
-        worst_case_weeks: float
-    ) -> Dict[str, Any]:
-        """
-        Generate failure forecast narrative
+Return ONLY valid JSON, no markdown formatting."""
 
-        Args:
-            project_data: Project metadata (name, description, stack, etc.)
-            risk_scores: Calculated risk scores
-            worst_case_weeks: P90 or worst-case timeline
-
-        Returns:
-            Dict with failure_story and mitigations
-        """
-        system_instruction = (
-            "You are a technical project risk analyst. "
-            "Provide concise, actionable failure scenarios and mitigations. "
-            "Be specific and data-driven. Use sharp, technical language."
-        )
-
-        prompt = f"""
-Project: {project_data.get('project_name')}
-Stack: {project_data.get('stack')}
-Team: {project_data.get('team_senior')} senior, {project_data.get('team_mid')} mid, {project_data.get('team_junior')} junior
-Deadline: {project_data.get('deadline_weeks')} weeks
-P90 Timeline: {worst_case_weeks:.1f} weeks
-
-Risk Scores:
-- Integration Risk: {risk_scores.get('integration', 0):.0f}/100
-- Team Imbalance Risk: {risk_scores.get('team_imbalance', 0):.0f}/100
-- Scope Creep Risk: {risk_scores.get('scope_creep', 0):.0f}/100
-- Learning Curve Risk: {risk_scores.get('learning_curve', 0):.0f}/100
-
-Generate a failure forecast in JSON format:
-{{
-  "failure_story": [
-    "Bullet point 1 - specific failure sequence",
-    "Bullet point 2 - what breaks first",
-    "Bullet point 3 - cascade effect"
-  ],
-  "mitigations": [
-    "Mitigation 1 - specific action",
-    "Mitigation 2 - specific action",
-    "Mitigation 3 - specific action"
-  ]
-}}
-
-Be specific about WHICH risk factor causes failure and HOW it cascades.
-"""
-
-        response = self.generate(
-            prompt=prompt,
-            temperature=0.6,
-            max_tokens=800,
-            system_instruction=system_instruction
-        )
-
-        if not response.success:
+        response_text = self._call_llm(prompt)
+        
+        if not response_text:
+            # Fallback if LLM unavailable
             return {
-                "failure_story": ["LLM service unavailable"],
-                "mitigations": ["Retry later or check API configuration"]
+                "failure_story": [
+                    "Integration delays cascade due to API instability and third-party dependencies",
+                    f"Team velocity drops as junior members struggle with {project_context['stack']} learning curve",
+                    "Scope creep adds unplanned features, expanding timeline by 20-30%",
+                    "Testing phase reveals architectural issues requiring significant refactor",
+                ],
+                "mitigations": [
+                    f"Add {max(1, project_context['team_junior'])} senior developer(s) or extend deadline by {int(worst_runs['p90_weeks'] - project_context['deadline_weeks'])} weeks",
+                    "Lock scope early and defer non-critical features to post-MVP",
+                    "Build integration mocks and test harnesses upfront to derisk dependencies",
+                ],
             }
-
+        
         try:
-            # Parse JSON from response
-            # Gemini sometimes wraps JSON in markdown, so strip that
-            content = response.content.strip()
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.startswith("```"):
-                content = content[3:]
-            if content.endswith("```"):
-                content = content[:-3]
-
-            return json.loads(content.strip())
-        except json.JSONDecodeError:
-            # Fallback: parse as plain text
+            # Try to parse JSON from response
+            cleaned = response_text.strip()
+            if cleaned.startswith("```json"):
+                cleaned = cleaned[7:]
+            if cleaned.startswith("```"):
+                cleaned = cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            result = json.loads(cleaned.strip())
+            return result
+        except:
+            # Fallback parsing
             return {
-                "failure_story": [response.content[:200]],
-                "mitigations": ["Enable debug mode for full LLM output"]
+                "failure_story": [line.strip() for line in response_text.split('\n') if line.strip()][:5],
+                "mitigations": ["Review LLM output for structured mitigations"],
             }
-
-    def generate_task_breakdown(
-        self,
-        project_data: Dict[str, Any],
-        simulation_results: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    
+    def generate_executive_summary(self, project_context: dict, metrics: dict) -> str:
         """
-        Generate AI task breakdown (first 10 tasks)
-
-        Args:
-            project_data: Project metadata
-            simulation_results: Monte Carlo results and risk scores
-
-        Returns:
-            List of tasks with role and risk_flag
+        Generate executive summary text from project and metrics.
         """
-        system_instruction = (
-            "You are a technical project manager creating execution tasks. "
-            "Output tasks in JSON array format. Be specific and technical."
-        )
+        prompt = f"""You are a technical project manager preparing an executive summary for leadership. 
 
-        top_risks = simulation_results.get('risk_scores', {})
+Project: {project_context['project_name']}
+Description: {project_context['description']}
+Stack: {project_context['stack']}
+Team: {project_context['team_size']} developers ({project_context['team_senior']} senior, {project_context['team_mid']} mid, {project_context['team_junior']} junior)
 
-        prompt = f"""
-Project: {project_data.get('project_name')}
-Description: {project_data.get('description', 'N/A')}
-Stack: {project_data.get('stack')}
-Deadline: {project_data.get('deadline_weeks')} weeks
+Simulation Results:
+- On-time probability: {metrics['on_time_probability']:.1%}
+- Expected completion: P50 = {metrics['p50_weeks']:.1f} weeks, P90 = {metrics['p90_weeks']:.1f} weeks
+- Deadline: {project_context['deadline_weeks']} weeks
+- Estimated cost: ${metrics['p50_cost']:,.0f} (P50) to ${metrics['p90_cost']:,.0f} (P90)
+- Team stress index: {metrics['team_stress_index']}/100
 
 Top Risks:
-- Integration: {top_risks.get('integration', 0):.0f}/100
-- Learning Curve: {top_risks.get('learning_curve', 0):.0f}/100
+- Integration: {metrics['risk_scores']['integration']}/100
+- Team imbalance: {metrics['risk_scores']['team_imbalance']}/100
+- Scope creep: {metrics['risk_scores']['scope_creep']}/100
 
-Generate the first 10 critical execution tasks in JSON array format:
-[
-  {{
-    "title": "Task description",
-    "role": "FE|BE|DevOps",
-    "risk_flag": "High Risk|Dependency Bottleneck|Early Validation|null"
-  }}
-]
+Write a concise 4-8 sentence executive summary covering: timeline confidence, key risks, cost range, and one critical recommendation. Use clear, business-appropriate language."""
 
-Prioritize tasks by critical path and risk mitigation.
-Focus on setup, integrations, and high-risk areas first.
-"""
-
-        response = self.generate(
-            prompt=prompt,
-            temperature=0.5,
-            max_tokens=1200,
-            system_instruction=system_instruction
-        )
-
-        if not response.success:
-            return [{
-                "title": "LLM service unavailable",
-                "role": "DevOps",
-                "risk_flag": "High Risk"
-            }]
-
-        try:
-            content = response.content.strip()
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.startswith("```"):
-                content = content[3:]
-            if content.endswith("```"):
-                content = content[:-3]
-
-            return json.loads(content.strip())
-        except json.JSONDecodeError:
-            return [{
-                "title": "Parse LLM response manually",
-                "role": "DevOps",
-                "risk_flag": "High Risk"
-            }]
-
-    def generate_executive_summary(
-        self,
-        project_data: Dict[str, Any],
-        simulation_results: Dict[str, Any]
-    ) -> str:
+        response_text = self._call_llm(prompt)
+        
+        if not response_text:
+            # Fallback if LLM unavailable
+            return (
+                f"{project_context['project_name']} has a {metrics['on_time_probability']:.0%} chance of meeting the {project_context['deadline_weeks']}-week deadline. "
+                f"Expected completion is {metrics['p50_weeks']:.1f} weeks (P50) with a worst-case of {metrics['p90_weeks']:.1f} weeks (P90). "
+                f"Key risks include integration complexity ({metrics['risk_scores']['integration']}/100) and scope volatility. "
+                f"Estimated cost ranges from ${metrics['p50_cost']:,.0f} to ${metrics['p90_cost']:,.0f}. "
+                f"Critical recommendation: {'Add senior resources or extend timeline' if metrics['on_time_probability'] < 0.5 else 'Lock scope early to maintain schedule confidence'}."
+            )
+        
+        return response_text.strip()
+    
+    def generate_task_breakdown(self, project_context: dict, risks: dict) -> list[dict]:
         """
-        Generate executive summary
-
-        Args:
-            project_data: Project metadata
-            simulation_results: Full simulation output
-
-        Returns:
-            Executive summary text (4-8 sentences)
+        Generate 10 ordered tasks with role and risk tags.
         """
-        system_instruction = (
-            "You are an executive advisor. "
-            "Write concise, data-driven summaries for leadership. "
-            "Focus on confidence, risks, and resource needs."
-        )
+        prompt = f"""You are a technical lead planning execution for a software project.
 
-        prompt = f"""
-Project: {project_data.get('project_name')}
-Stack: {project_data.get('stack')}
-Team: {project_data.get('team_senior')} senior, {project_data.get('team_mid')} mid, {project_data.get('team_junior')} junior
-Deadline: {project_data.get('deadline_weeks')} weeks
+Project: {project_context['project_name']}
+Description: {project_context['description']}
+Stack: {project_context['stack']}
+Timeline: {project_context['p50_weeks']:.1f} weeks (P50), {project_context['p90_weeks']:.1f} weeks (P90)
 
-Results:
-- On-time Probability: {simulation_results.get('on_time_probability', 0)*100:.0f}%
-- Expected Completion (P50): {simulation_results.get('p50_weeks', 0):.1f} weeks
-- Worst-Case (P90): {simulation_results.get('p90_weeks', 0):.1f} weeks
-- Expected Overrun: {simulation_results.get('expected_overrun_days', 0):.1f} days
-- Team Stress Index: {simulation_results.get('team_stress_index', 0):.0f}/100
+Top Risk Areas:
+- Integration complexity: {risks['integration']}/100
+- Team imbalance: {risks['team_imbalance']}/100
+- Learning curve: {risks['learning_curve']}/100
 
-Top Risks:
-{json.dumps(simulation_results.get('risk_scores', {}), indent=2)}
+Generate exactly 10 implementation tasks ordered by priority/critical path. For each task, provide:
+- "title": clear, actionable task description
+- "role": one of "FE", "BE", or "DevOps"
+- "risk_flag": null, "High Risk", "Dependency Bottleneck", or "Early Validation"
 
-Write a 4-8 sentence executive summary covering:
-1. Project confidence score explanation
-2. P50/P90 timeline and overrun summary
-3. Top 3 risks and recommended mitigations
-4. Resource allocation recommendation
+Return ONLY valid JSON array with no markdown formatting:
+[{{"title": "...", "role": "...", "risk_flag": "..."}}, ...]"""
 
-Use sharp, technical language. Be direct about risks.
-"""
-
-        response = self.generate(
-            prompt=prompt,
-            temperature=0.6,
-            max_tokens=600,
-            system_instruction=system_instruction
-        )
-
-        if not response.success:
-            return "LLM service unavailable. Check API configuration and retry."
-
-        return response.content
-
-
-# ========================================
-# FALLBACK / MOCK MODE (for testing without API key)
-# ========================================
-
-class MockGeminiClient:
-    """Mock client for testing without API key"""
-
-    def generate_failure_forecast(self, project_data, risk_scores, worst_case_weeks):
-        return {
-            "failure_story": [
-                "Integration delays compound with learning curve (new stack)",
-                "Junior devs blocked on complex API integrations",
-                "Deadline pressure leads to technical debt and rework"
-            ],
-            "mitigations": [
-                "Add 1 senior dev to unblock integrations early",
-                "Allocate 2 weeks for stack learning / spike work",
-                "Build integration POCs before full implementation"
+        response_text = self._call_llm(prompt)
+        
+        if not response_text:
+            # Fallback if LLM unavailable
+            stack_lower = project_context['stack'].lower()
+            is_fe_heavy = any(x in stack_lower for x in ['react', 'vue', 'angular', 'next'])
+            
+            return [
+                {"title": "Set up CI/CD pipeline and deployment infrastructure", "role": "DevOps", "risk_flag": "Early Validation"},
+                {"title": "Design and implement core API endpoints", "role": "BE", "risk_flag": "High Risk"},
+                {"title": "Build authentication and authorization system", "role": "BE", "risk_flag": "Dependency Bottleneck"},
+                {"title": "Create UI component library and design system", "role": "FE", "risk_flag": None} if is_fe_heavy else {"title": "Set up database schema and migrations", "role": "BE", "risk_flag": "Dependency Bottleneck"},
+                {"title": "Implement external API integrations", "role": "BE", "risk_flag": "High Risk"},
+                {"title": "Build frontend state management and data flows", "role": "FE", "risk_flag": None},
+                {"title": "Set up monitoring and error tracking", "role": "DevOps", "risk_flag": "Early Validation"},
+                {"title": "Implement responsive layouts and mobile optimization", "role": "FE", "risk_flag": None},
+                {"title": "Write integration tests for critical paths", "role": "BE", "risk_flag": "Dependency Bottleneck"},
+                {"title": "Performance optimization and load testing", "role": "DevOps", "risk_flag": None},
             ]
-        }
-
-    def generate_task_breakdown(self, project_data, simulation_results):
-        return [
-            {"title": "Set up project scaffolding and dev environment", "role": "DevOps", "risk_flag": None},
-            {"title": "Design API schema and data models", "role": "BE", "risk_flag": "Early Validation"},
-            {"title": "Build authentication flow", "role": "BE", "risk_flag": "Dependency Bottleneck"},
-            {"title": "Create component library and design system", "role": "FE", "risk_flag": None},
-            {"title": "Integrate third-party APIs (Stripe, Auth0)", "role": "BE", "risk_flag": "High Risk"},
-            {"title": "Build core user dashboard UI", "role": "FE", "risk_flag": None},
-            {"title": "Implement real-time data sync", "role": "BE", "risk_flag": "High Risk"},
-            {"title": "Add error handling and logging", "role": "DevOps", "risk_flag": "Early Validation"},
-            {"title": "Write integration tests for critical paths", "role": "BE", "risk_flag": None},
-            {"title": "Deploy staging environment", "role": "DevOps", "risk_flag": "Dependency Bottleneck"}
-        ]
-
-    def generate_executive_summary(self, project_data, simulation_results):
-        return (
-            f"Project '{project_data.get('project_name')}' has a "
-            f"{simulation_results.get('on_time_probability', 0)*100:.0f}% probability of meeting "
-            f"the {project_data.get('deadline_weeks')}-week deadline. Expected completion is "
-            f"{simulation_results.get('p50_weeks', 0):.1f} weeks (P50), with worst-case at "
-            f"{simulation_results.get('p90_weeks', 0):.1f} weeks (P90). Top risks include integration "
-            f"complexity and team learning curve. Recommended mitigations: allocate senior dev capacity "
-            f"to integration work early, and build POCs for new stack components before full implementation."
-        )
-
-
-# ========================================
-# Factory Function
-# ========================================
-
-def get_llm_client(use_mock: bool = False) -> GeminiClient:
-    """
-    Get LLM client (real or mock)
-
-    Args:
-        use_mock: If True, return mock client (for testing without API key)
-
-    Returns:
-        GeminiClient or MockGeminiClient
-    """
-    if use_mock:
-        return MockGeminiClient()
-
-    try:
-        return GeminiClient()
-    except ValueError:
-        # API key not configured, fall back to mock
-        print("WARNING: Gemini API key not configured. Using mock client.")
-        return MockGeminiClient()
+        
+        try:
+            # Try to parse JSON from response
+            cleaned = response_text.strip()
+            if cleaned.startswith("```json"):
+                cleaned = cleaned[7:]
+            if cleaned.startswith("```"):
+                cleaned = cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            tasks = json.loads(cleaned.strip())
+            return tasks[:10]
+        except:
+            # Fallback
+            return [{"title": f"Task {i+1} from LLM", "role": "BE", "risk_flag": None} for i in range(10)]

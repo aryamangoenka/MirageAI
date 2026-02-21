@@ -1,28 +1,31 @@
 # ===================================
 # PlanSight Backend Dependencies
-# Person D - DevOps Configuration
+# Merged: Person B (Backend) + Person D (DevOps/Testing)
 # ===================================
 
-# === Core Framework ===
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-pydantic==2.5.3
-pydantic-settings==2.1.0
-
-# === CORS & Middleware ===
-python-multipart==0.0.6
-
-# === LLM Integration ===
-google-generativeai==0.3.2
+# === Core Framework (Person B - newer versions) ===
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
 
 # === Data Processing ===
-numpy==1.26.3
-scipy==1.11.4
+numpy==2.1.3
 
 # === Environment & Config ===
-python-dotenv==1.0.0
+python-dotenv==1.0.1
 
-# === Optional: Calibration (scikit-learn) ===
+# === LLM Integration ===
+google-generativeai==0.8.3
+
+# === HTTP Client (for testing) ===
+httpx==0.27.2
+
+# === Person D additions: Load Testing & Development ===
+aiohttp==3.9.1  # Async load testing
+pytest==7.4.4  # Unit testing
+pytest-asyncio==0.23.3  # Async test support
+
+# === Optional: Future Features ===
 # Uncomment if implementing /calibrate endpoint
 # scikit-learn==1.4.0
 # pandas==2.1.4
@@ -30,12 +33,4 @@ python-dotenv==1.0.0
 # === Optional: MongoDB Atlas Integration ===
 # Uncomment if using MongoDB for calibration data
 # pymongo==4.6.1
-# motor==3.3.2  # Async MongoDB driver
-
-# === Development & Testing ===
-pytest==7.4.4
-pytest-asyncio==0.23.3
-httpx==0.26.0  # For testing FastAPI endpoints
-
-# === Load Testing ===
-aiohttp==3.9.1
+# motor==3.3.2
