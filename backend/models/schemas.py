@@ -65,12 +65,18 @@ class ExecutiveSummaryRequest(BaseModel):
     stack: str
     p50_weeks: float
     p90_weeks: float
-    on_time_probability: float
+    on_time_probability: float  # percentage (0-100) as sent by frontend
     p50_cost: float
     p90_cost: float
     currency: str
     risk_scores: RiskScores
     role_allocation: dict[str, float]
+    # Team composition (optional, used for richer summary context)
+    deadline_weeks: Optional[int] = None
+    team_junior: Optional[int] = None
+    team_mid: Optional[int] = None
+    team_senior: Optional[int] = None
+    num_simulations: Optional[int] = 1000
 
 
 class ExecutiveSummaryResponse(BaseModel):

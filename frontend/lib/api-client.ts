@@ -281,7 +281,7 @@ export async function fetchExecutiveSummary(
       stack: req.tech_stack,
       p50_weeks: sim.p50_weeks,
       p90_weeks: sim.p90_weeks,
-      on_time_probability: sim.on_time_probability,
+      on_time_probability: sim.on_time_probability, // percentage (0-100)
       p50_cost: sim.p50_cost,
       p90_cost: sim.p90_cost,
       currency: "USD",
@@ -296,6 +296,12 @@ export async function fetchExecutiveSummary(
         be: sim.allocation.backend_pct,
         devops: sim.allocation.devops_pct,
       },
+      // Extra context for richer LLM-generated summaries
+      deadline_weeks: req.deadline_weeks,
+      team_junior: req.team_junior,
+      team_mid: req.team_mid,
+      team_senior: req.team_senior,
+      num_simulations: req.num_simulations ?? 1000,
     }
 
     const backendResponse = await post<BackendExecutiveSummaryResponse>("/executive-summary", backendRequest)

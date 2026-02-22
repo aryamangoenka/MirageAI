@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from dotenv import load_dotenv
+
+# Load .env BEFORE any os.getenv() calls anywhere in the app
+load_dotenv()
 from models.schemas import (
     SimulationRequest,
     SimulationResponse,
@@ -136,39 +140,36 @@ async def executive_summary(request: ExecutiveSummaryRequest):
     Generate executive summary for leadership using LLM.
     """
     from services.llm_client import LLMClient
-    
+
     project_context = {
         "project_name": request.project_name,
         "description": request.description,
         "stack": request.stack,
-        "team_size": sum([
-            request.role_allocation.get("fe", 0),
-            request.role_allocation.get("be", 0),
-            request.role_allocation.get("devops", 0)
-        ]) * 3,
-        "team_senior": 1,
-        "team_mid": 1,
-        "team_junior": 1,
-        "deadline_weeks": int(request.p50_weeks),
+        # Use actual deadline if provided, otherwise fall back to P50 as proxy
+        "deadline_weeks": request.deadline_weeks or round(request.p50_weeks),
+        "team_junior": request.team_junior or 1,
+        "team_mid": request.team_mid or 1,
+        "team_senior": request.team_senior or 1,
+        "num_simulations": request.num_simulations or 1000,
     }
-    
+
     metrics = {
+        # on_time_probability arrives as a percentage (0-100) from the frontend
         "on_time_probability": request.on_time_probability,
         "p50_weeks": request.p50_weeks,
         "p90_weeks": request.p90_weeks,
         "p50_cost": request.p50_cost,
         "p90_cost": request.p90_cost,
-        "team_stress_index": 50,
         "risk_scores": {
             "integration": request.risk_scores.integration,
             "team_imbalance": request.risk_scores.team_imbalance,
             "scope_creep": request.risk_scores.scope_creep,
         },
     }
-    
+
     llm_client = LLMClient()
     summary_text = llm_client.generate_executive_summary(project_context, metrics)
-    
+
     return ExecutiveSummaryResponse(summary_text=summary_text)
 
 
