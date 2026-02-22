@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useAppState } from "@/lib/app-state"
-import { AlertTriangle, ListChecks, FileText, Download } from "lucide-react"
+import { FileText } from "lucide-react"
 
 function StepIndicator({ hasRun }: { hasRun: boolean }) {
   const steps = ["Intake", "Simulation", "Insights"]
@@ -52,36 +52,12 @@ export function DashboardNavbar() {
         {/* Right */}
         <div className="flex items-center gap-0.5">
           <button
-            onClick={() => setActivePanel("failure")}
-            disabled={!hasRun}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-all duration-200 hover:bg-secondary/80 hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-          >
-            <AlertTriangle className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Failure Forecast</span>
-          </button>
-          <button
-            onClick={() => setActivePanel("tasks")}
-            disabled={!hasRun}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-all duration-200 hover:bg-secondary/80 hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-          >
-            <ListChecks className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Task Blueprint</span>
-          </button>
-          <button
             onClick={() => setActivePanel("summary")}
             disabled={!hasRun}
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-all duration-200 hover:bg-secondary/80 hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
           >
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Summary</span>
-          </button>
-          <div className="mx-1.5 h-4 w-px bg-border/50" />
-          <button
-            disabled
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-all duration-200 hover:bg-secondary/80 hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-            title="Export (coming soon)"
-          >
-            <Download className="h-3.5 w-3.5" />
           </button>
         </div>
       </nav>

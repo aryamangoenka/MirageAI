@@ -1,8 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
-import type { SimulationRequest, SimulationResponse } from "@/lib/types"
-import { runSimulation, runScenario } from "@/lib/api-client"
+import type { SimulationRequest, SimulationResponse, ExecutionPlanResponse, ExecutiveSummaryResponse } from "@/lib/types"
+import { runSimulation, runScenario, fetchExecutionPlan, fetchExecutiveSummary } from "@/lib/api-client"
 import { DEMO_FORM_DATA } from "@/lib/mock-data"
 import { toast } from "sonner"
 
@@ -18,6 +18,18 @@ interface AppState {
   isSimulating: boolean
   isScenarioRunning: boolean
   hasRun: boolean
+
+  // Execution plan (fetched in background when simulation runs)
+  executionPlan: ExecutionPlanResponse | null
+  isExecutionPlanLoading: boolean
+  executionPlanError: boolean
+  regenerateExecutionPlan: () => Promise<void>
+
+  // Executive summary (fetched in background when simulation runs)
+  executiveSummary: ExecutiveSummaryResponse | null
+  isExecutiveSummaryLoading: boolean
+  executiveSummaryError: boolean
+  regenerateExecutiveSummary: () => Promise<void>
 
   // Actions
   simulate: (data: SimulationRequest) => Promise<void>
@@ -65,8 +77,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activePanel, setActivePanel] = useState<"failure" | "tasks" | "summary" | null>(null)
   const [showAdvisor, setShowAdvisor] = useState(false)
 
+  const [executionPlan, setExecutionPlan] = useState<ExecutionPlanResponse | null>(null)
+  const [isExecutionPlanLoading, setIsExecutionPlanLoading] = useState(false)
+  const [executionPlanError, setExecutionPlanError] = useState(false)
+
+  const [executiveSummary, setExecutiveSummary] = useState<ExecutiveSummaryResponse | null>(null)
+  const [isExecutiveSummaryLoading, setIsExecutiveSummaryLoading] = useState(false)
+  const [executiveSummaryError, setExecutiveSummaryError] = useState(false)
+
   const loadDemo = useCallback(() => {
     setFormData(DEMO_FORM_DATA)
+  }, [])
+
+  const startExecutiveSummaryFetch = useCallback((data: SimulationRequest, result: SimulationResponse) => {
+    setExecutiveSummary(null)
+    setExecutiveSummaryError(false)
+    setIsExecutiveSummaryLoading(true)
+    fetchExecutiveSummary(data, result)
+      .then((summary) => setExecutiveSummary(summary))
+      .catch(() => setExecutiveSummaryError(true))
+      .finally(() => setIsExecutiveSummaryLoading(false))
+  }, [])
+
+  // Fires the Ollama call in the background — does not block the simulation UI
+  const startExecutionPlanFetch = useCallback((data: SimulationRequest, result: SimulationResponse) => {
+    setExecutionPlan(null)
+    setExecutionPlanError(false)
+    setIsExecutionPlanLoading(true)
+    fetchExecutionPlan(data, result)
+      .then((plan) => {
+        setExecutionPlan(plan)
+      })
+      .catch(() => {
+        setExecutionPlanError(true)
+      })
+      .finally(() => {
+        setIsExecutionPlanLoading(false)
+      })
   }, [])
 
   const simulate = useCallback(async (data: SimulationRequest) => {
@@ -76,13 +123,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const result = await runSimulation(data)
       setBaseline(result)
       setHasRun(true)
-      // Removed success toast - simulation results speak for themselves
+      // Fire background fetches immediately after simulation completes
+      startExecutionPlanFetch(data, result)
+      startExecutiveSummaryFetch(data, result)
     } catch {
       toast.error("Simulation failed", { description: "Please try again." })
     } finally {
       setIsSimulating(false)
     }
-  }, [])
+  }, [startExecutionPlanFetch, startExecutiveSummaryFetch])
 
   const runScenarioAction = useCallback(
     async (seniorDelta: number, integrationsDelta: number, deadlineDelta: number) => {
@@ -100,6 +149,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [baseline]
   )
 
+  const regenerateExecutionPlan = useCallback(async () => {
+    if (!baseline) return
+    startExecutionPlanFetch(formData, baseline)
+  }, [baseline, formData, startExecutionPlanFetch])
+
+  const regenerateExecutiveSummary = useCallback(async () => {
+    if (!baseline) return
+    startExecutiveSummaryFetch(formData, baseline)
+  }, [baseline, formData, startExecutiveSummaryFetch])
+
   return (
     <AppContext.Provider
       value={{
@@ -111,6 +170,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isSimulating,
         isScenarioRunning,
         hasRun,
+        executionPlan,
+        isExecutionPlanLoading,
+        executionPlanError,
+        regenerateExecutionPlan,
+        executiveSummary,
+        isExecutiveSummaryLoading,
+        executiveSummaryError,
+        regenerateExecutiveSummary,
         simulate,
         runScenarioAction,
         activePanel,

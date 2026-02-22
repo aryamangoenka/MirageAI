@@ -16,6 +16,10 @@ from models.schemas import (
     TaskBreakdownResponse,
     HistogramBucket,
     RiskScores,
+    ExecutionPlanRequest,
+    ExecutionPlanResponse,
+    ExecutionPlanPhase,
+    ExecutionPlanTask,
 )
 
 app = FastAPI(title="PlanSight API", version="1.0.0")
@@ -209,6 +213,71 @@ async def task_breakdown(request: TaskBreakdownRequest):
     ]
     
     return TaskBreakdownResponse(tasks=tasks)
+
+
+@app.post("/execution-plan", response_model=ExecutionPlanResponse)
+async def execution_plan(request: ExecutionPlanRequest):
+    """
+    Generate a phased execution plan using local Ollama (gemini-3-flash-preview),
+    with automatic fallback to Gemini cloud API and finally a static plan.
+    """
+    from services.ollama_client import OllamaClient
+
+    project_context = {
+        "project_name": request.project_name,
+        "description": request.description,
+        "stack": request.stack,
+        "deadline_weeks": request.deadline_weeks,
+        "team_junior": request.team_junior,
+        "team_mid": request.team_mid,
+        "team_senior": request.team_senior,
+        "integrations": request.integrations,
+        "scope_volatility": request.scope_volatility,
+        "complexity": request.complexity,
+    }
+
+    simulation_data = {
+        "p50_weeks": request.p50_weeks,
+        "p90_weeks": request.p90_weeks,
+        "on_time_probability": request.on_time_probability,
+        "risk_scores": {
+            "integration": request.risk_scores.integration,
+            "team_imbalance": request.risk_scores.team_imbalance,
+            "scope_creep": request.risk_scores.scope_creep,
+            "learning_curve": request.risk_scores.learning_curve,
+        },
+    }
+
+    client = OllamaClient()
+    result = client.generate_execution_plan(project_context, simulation_data)
+
+    # Coerce raw dicts into validated Pydantic models
+    phases = [
+        ExecutionPlanPhase(
+            name=p["name"],
+            week_start=int(p.get("week_start", 1)),
+            week_end=int(p.get("week_end", 2)),
+            description=p.get("description", ""),
+            tasks=[
+                ExecutionPlanTask(
+                    title=t.get("title", "Task"),
+                    role=t.get("role", "BE") if t.get("role") in {"FE", "BE", "DevOps"} else "BE",
+                    priority=t.get("priority", "medium") if t.get("priority") in {"high", "medium", "low"} else "medium",
+                    risk_flag=t.get("risk_flag") if t.get("risk_flag") in {None, "High Risk", "Dependency Bottleneck", "Early Validation"} else None,
+                )
+                for t in p.get("tasks", [])
+            ],
+            risks=p.get("risks", []),
+            milestone=p.get("milestone", ""),
+        )
+        for p in result.get("phases", [])
+    ]
+
+    return ExecutionPlanResponse(
+        phases=phases,
+        go_no_go_checkpoints=result.get("go_no_go_checkpoints", []),
+        critical_path_note=result.get("critical_path_note", ""),
+    )
 
 
 if __name__ == "__main__":

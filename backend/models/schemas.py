@@ -109,3 +109,49 @@ class TaskBreakdownResponse(BaseModel):
 class HealthResponse(BaseModel):
     """Health check response."""
     status: str
+
+
+# ── Execution Plan ─────────────────────────────────────────────────────────
+
+class ExecutionPlanRequest(BaseModel):
+    """Request for AI-generated execution plan."""
+    # Project form fields
+    project_name: str
+    description: str
+    stack: str
+    deadline_weeks: int = Field(..., gt=0)
+    team_junior: int = Field(..., ge=0)
+    team_mid: int = Field(..., ge=0)
+    team_senior: int = Field(..., ge=0)
+    integrations: int = Field(..., ge=0)
+    scope_volatility: int = Field(..., ge=0, le=100)
+    complexity: int = Field(..., ge=1, le=5)
+    scope_size: Literal["small", "medium", "large"]
+    # Simulation results (passed from frontend state so we don't re-run)
+    p50_weeks: float
+    p90_weeks: float
+    on_time_probability: float  # percentage 0-100
+    risk_scores: RiskScores
+
+
+class ExecutionPlanTask(BaseModel):
+    title: str
+    role: str = Field(..., description="FE | BE | DevOps")
+    priority: str = Field(..., description="high | medium | low")
+    risk_flag: Optional[str] = None
+
+
+class ExecutionPlanPhase(BaseModel):
+    name: str
+    week_start: int
+    week_end: int
+    description: str
+    tasks: list[ExecutionPlanTask]
+    risks: list[str]
+    milestone: str
+
+
+class ExecutionPlanResponse(BaseModel):
+    phases: list[ExecutionPlanPhase]
+    go_no_go_checkpoints: list[dict]  # [{week: int, condition: str}]
+    critical_path_note: str

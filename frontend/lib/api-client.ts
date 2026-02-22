@@ -4,6 +4,7 @@ import type {
   FailureForecastResponse,
   TaskBreakdownResponse,
   ExecutiveSummaryResponse,
+  ExecutionPlanResponse,
 } from "./types"
 import {
   generateMockSimulation,
@@ -267,6 +268,94 @@ export async function fetchTaskBreakdown(
     console.error("API error, using mock data:", error)
     await delay(700 + Math.random() * 500)
     return generateMockTaskBreakdown()
+  }
+}
+
+export async function fetchExecutionPlan(
+  req: SimulationRequest,
+  sim: SimulationResponse
+): Promise<ExecutionPlanResponse> {
+  try {
+    const backendRequest = {
+      project_name: req.project_name,
+      description: req.description,
+      stack: req.tech_stack,
+      deadline_weeks: req.deadline_weeks,
+      team_junior: req.team_junior,
+      team_mid: req.team_mid,
+      team_senior: req.team_senior,
+      integrations: req.integrations_count,
+      scope_volatility: req.scope_volatility,
+      complexity: req.complexity,
+      scope_size: req.scope_size,
+      p50_weeks: sim.p50_weeks,
+      p90_weeks: sim.p90_weeks,
+      on_time_probability: sim.on_time_probability,
+      risk_scores: {
+        integration: sim.risks.integration_risk.score,
+        team_imbalance: sim.risks.team_imbalance_risk.score,
+        scope_creep: sim.risks.scope_creep_risk.score,
+        learning_curve: sim.risks.learning_curve_risk.score,
+      },
+    }
+
+    const data = await post<ExecutionPlanResponse>("/execution-plan", backendRequest)
+    return data
+  } catch (error) {
+    console.error("fetchExecutionPlan error, using static fallback:", error)
+    // Static mock so the UI always has something to show
+    const deadline = req.deadline_weeks
+    const mid = Math.max(2, Math.round(deadline / 3))
+    const late = Math.max(mid + 1, Math.round(deadline * 0.75))
+    return {
+      phases: [
+        {
+          name: "Foundation",
+          week_start: 1,
+          week_end: mid,
+          description: "Establish the project skeleton, CI/CD, and core architecture.",
+          tasks: [
+            { title: "Set up repo, CI pipeline, and dev environments", role: "DevOps", priority: "high", risk_flag: "Early Validation" },
+            { title: "Design database schema and domain model", role: "BE", priority: "high", risk_flag: "Dependency Bottleneck" },
+            { title: "Build authentication and base API layer", role: "BE", priority: "high", risk_flag: "High Risk" },
+          ],
+          risks: ["Critical-path blocker if infra setup takes longer than planned."],
+          milestone: "Backend skeleton live, CI passing",
+        },
+        {
+          name: "Core Build",
+          week_start: mid + 1,
+          week_end: late,
+          description: "Implement core user journeys, integrations, and primary UI.",
+          tasks: [
+            { title: "Implement primary user-facing screens", role: "FE", priority: "high", risk_flag: null },
+            { title: "Integrate all third-party APIs", role: "BE", priority: "high", risk_flag: "High Risk" },
+            { title: "Connect frontend to backend with state management", role: "FE", priority: "medium", risk_flag: "Dependency Bottleneck" },
+          ],
+          risks: ["Scope creep and API surprises can easily extend this phase."],
+          milestone: "End-to-end user flow demoable",
+        },
+        {
+          name: "Hardening & Launch",
+          week_start: late + 1,
+          week_end: deadline,
+          description: "Testing, monitoring, performance tuning, and launch preparation.",
+          tasks: [
+            { title: "Write integration and E2E test suite", role: "BE", priority: "medium", risk_flag: null },
+            { title: "Add monitoring, alerting, and runbooks", role: "DevOps", priority: "medium", risk_flag: null },
+            { title: "Performance and security review", role: "DevOps", priority: "low", risk_flag: "Early Validation" },
+          ],
+          risks: ["Insufficient hardening time increases launch-day risk."],
+          milestone: "Production-ready release",
+        },
+      ],
+      go_no_go_checkpoints: [
+        { week: mid, condition: "Core APIs are stable and all external integrations are verified." },
+        { week: late, condition: "Primary user journeys are fully functional and demoable end-to-end." },
+      ],
+      critical_path_note:
+        "The backend API and integration layer form the critical path. Any slip there delays all frontend work. Protect these tasks first.",
+    }
   }
 }
 

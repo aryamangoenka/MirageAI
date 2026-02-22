@@ -1,16 +1,21 @@
 'use client'
 
 import { useEffect, useMemo, useRef } from 'react'
-import { SimulationResponse, SimulationRequest } from '@/lib/types'
+import { SimulationResponse, SimulationRequest, ExecutionPlanResponse } from '@/lib/types'
 
 interface Props {
   simulation: SimulationResponse
   request: SimulationRequest
+  executionPlan?: ExecutionPlanResponse | null
   onClose: () => void
 }
 
 // Helper function to build agent variables
-function buildAgentVariables(request: SimulationRequest, simulation: SimulationResponse) {
+function buildAgentVariables(
+  request: SimulationRequest,
+  simulation: SimulationResponse,
+  executionPlan?: ExecutionPlanResponse | null,
+) {
   const effectiveTeamSize = (
     request.team_junior * 0.7 +
     request.team_mid * 1.0 +
@@ -24,6 +29,46 @@ function buildAgentVariables(request: SimulationRequest, simulation: SimulationR
     { name: 'Learning Curve Risk', score: simulation.risks.learning_curve_risk.score },
   ]
   const topRisk = risks.reduce((max, r) => r.score > max.score ? r : max).name
+
+  // ── Execution plan / task variables ─────────────────────────────────────
+  let ui_task_list = 'No execution plan generated yet.'
+  let ui_task_count = '0'
+  let ui_task_roles = ''
+  let ui_task_priorities = ''
+  let ui_task_risk_tags = ''
+  let ui_phase_count = '0'
+  let ui_critical_path = ''
+  let ui_go_no_go_checkpoints = ''
+
+  if (executionPlan && executionPlan.phases?.length > 0) {
+    const allTasks = executionPlan.phases.flatMap((phase) =>
+      phase.tasks.map((task) => ({ ...task, phase: phase.name }))
+    )
+
+    // Format task list as a human-readable structured string the agent can reference
+    const phaseLines = executionPlan.phases.map((phase) => {
+      const taskLines = phase.tasks
+        .map((t) => {
+          const flag = t.risk_flag ? ` [${t.risk_flag}]` : ''
+          return `  - [${t.role}, ${t.priority}] ${t.title}${flag}`
+        })
+        .join('\n')
+      return `Phase: ${phase.name} (Week ${phase.week_start}–${phase.week_end})\nMilestone: ${phase.milestone}\nTasks:\n${taskLines}`
+    })
+
+    ui_task_list = phaseLines.join('\n\n')
+    ui_task_count = allTasks.length.toString()
+    ui_task_roles = [...new Set(allTasks.map((t) => t.role))].join(', ')
+    ui_task_priorities = [...new Set(allTasks.map((t) => t.priority))].join(', ')
+    ui_task_risk_tags = [
+      ...new Set(allTasks.map((t) => t.risk_flag).filter(Boolean)),
+    ].join(', ')
+    ui_phase_count = executionPlan.phases.length.toString()
+    ui_critical_path = executionPlan.critical_path_note || ''
+    ui_go_no_go_checkpoints = executionPlan.go_no_go_checkpoints
+      .map((cp) => `Week ${cp.week}: ${cp.condition}`)
+      .join(' | ')
+  }
 
   return {
     project_name: request.project_name,
@@ -65,6 +110,15 @@ function buildAgentVariables(request: SimulationRequest, simulation: SimulationR
     allocation_devops: Math.round(simulation.allocation.devops_pct).toString(),
     integrations_count: request.integrations_count.toString(),
     scope_volatility: request.scope_volatility.toString(),
+    // ── Execution plan task variables (synced from Ollama-generated UI content)
+    ui_task_list,
+    ui_task_count,
+    ui_task_roles,
+    ui_task_priorities,
+    ui_task_risk_tags,
+    ui_phase_count,
+    ui_critical_path,
+    ui_go_no_go_checkpoints,
   }
 }
 
@@ -82,15 +136,16 @@ declare global {
   }
 }
 
-export function ConversationalAdvisor({ simulation, request, onClose }: Props) {
+export function ConversationalAdvisor({ simulation, request, executionPlan, onClose }: Props) {
   const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID || ''
   const containerRef = useRef<HTMLDivElement>(null)
   const initialized = useRef(false)
 
-  // Build agent variables
+  // Build agent variables — executionPlan tasks are included so the agent's
+  // spoken output always matches what is displayed in the UI.
   const agentVariables = useMemo(
-    () => buildAgentVariables(request, simulation),
-    [request, simulation]
+    () => buildAgentVariables(request, simulation, executionPlan),
+    [request, simulation, executionPlan]
   )
 
   useEffect(() => {

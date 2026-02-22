@@ -88,3 +88,33 @@ export interface ExecutiveSummaryResponse {
     top_risk: string
   }
 }
+
+// ── Execution Plan ──────────────────────────────────────────────────────────
+
+export interface ExecutionPlanTask {
+  title: string
+  role: "FE" | "BE" | "DevOps"
+  priority: "high" | "medium" | "low"
+  risk_flag?: "High Risk" | "Dependency Bottleneck" | "Early Validation" | null
+}
+
+export interface ExecutionPlanPhase {
+  name: string
+  week_start: number
+  week_end: number
+  description: string
+  tasks: ExecutionPlanTask[]
+  risks: string[]
+  milestone: string
+}
+
+export interface GoNoGoCheckpoint {
+  week: number
+  condition: string
+}
+
+export interface ExecutionPlanResponse {
+  phases: ExecutionPlanPhase[]
+  go_no_go_checkpoints: GoNoGoCheckpoint[]
+  critical_path_note: string
+}
