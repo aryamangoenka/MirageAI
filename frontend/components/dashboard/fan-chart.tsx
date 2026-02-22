@@ -28,24 +28,21 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
   // Generate fan chart data with centered axis showing deviations
   const fanData = useMemo(() => {
     const maxWeeks = Math.ceil(p90 * 1.2)
-    const baselineGrowth = 100 / p50 // Linear baseline growth rate
+    const baselineGrowth = 100 / p50
 
-    // Volatility increases with complexity and decreases with team size
-    const baseVolatility = 0.15 // 15% base volatility
+    const baseVolatility = 0.15
     const volatility = baseVolatility * (1 + complexity / 20) * (1 / Math.sqrt(teamSize / 3))
 
-    // Generate simulation paths
     const numPaths = 100
     const paths: number[][] = []
 
     for (let i = 0; i < numPaths; i++) {
-      const path = [0] // Start at 0 deviation
+      const path = [0]
       let cumulativeDeviation = 0
 
       for (let week = 1; week <= maxWeeks; week++) {
-        // Random walk with mean reversion
         const randomShock = (Math.random() - 0.5) * 2
-        const meanReversion = -0.1 * cumulativeDeviation // Pull back toward median
+        const meanReversion = -0.1 * cumulativeDeviation
         const weeklyDeviation = (volatility * week * randomShock + meanReversion) * baselineGrowth
 
         cumulativeDeviation += weeklyDeviation
@@ -54,7 +51,6 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
       paths.push(path)
     }
 
-    // Calculate percentile bands at each time step
     const data = []
     for (let week = 0; week <= maxWeeks; week++) {
       const deviations = paths.map(path => path[week]).sort((a, b) => a - b)
@@ -69,17 +65,13 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
 
       data.push({
         week,
-        // Upper bands
         p95Upper: Math.abs(p95),
         p90Upper: Math.abs(p90Val),
         p75Upper: Math.abs(p75),
-        // Lower bands (negative values)
         p95Lower: -Math.abs(p5),
         p90Lower: -Math.abs(p10),
         p75Lower: -Math.abs(p25),
-        // Median stays at 0
         median: 0,
-        // Sample paths (select 8 for visualization)
         path1: paths[5]?.[week],
         path2: paths[15]?.[week],
         path3: paths[30]?.[week],
@@ -94,22 +86,23 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
     return data
   }, [p50, p90, complexity, teamSize])
 
-  // Calculate max deviation for Y-axis scaling
   const maxDeviation = useMemo(() => {
     return Math.max(...fanData.map(d => Math.max(Math.abs(d.p95Upper), Math.abs(d.p95Lower))))
   }, [fanData])
 
   return (
-    <div className="glow-card rounded-xl border border-border bg-card/60 p-6 backdrop-blur-sm">
+    <div className="glass-card p-5">
       {/* Header */}
       <div className="mb-4">
-        <div className="flex items-center gap-2 mb-1">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="flex items-center gap-2.5 mb-1">
+          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
+            <TrendingUp className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <h3 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Path Simulation Plot (Fan Chart)
           </h3>
         </div>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-[10px] text-muted-foreground/60 ml-8">
           Symmetric uncertainty bands • Geometric Brownian motion • {numSimulations.toLocaleString()} simulations
         </p>
       </div>
@@ -118,19 +111,19 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
       <div className="mb-4 flex flex-wrap gap-x-4 gap-y-2 text-[10px]">
         <div className="flex items-center gap-1.5">
           <div className="h-2 w-4 rounded" style={{ background: 'linear-gradient(to bottom, rgba(59,130,246,0.15), rgba(239,68,68,0.15))' }}></div>
-          <span className="text-muted-foreground">90% confidence</span>
+          <span className="text-muted-foreground/70">90% confidence</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-2 w-4 rounded" style={{ background: 'linear-gradient(to bottom, rgba(59,130,246,0.3), rgba(239,68,68,0.3))' }}></div>
-          <span className="text-muted-foreground">75% confidence</span>
+          <span className="text-muted-foreground/70">75% confidence</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-0.5 w-4 bg-primary rounded"></div>
-          <span className="text-muted-foreground">Median path</span>
+          <span className="text-muted-foreground/70">Median path</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-0.5 w-4 bg-white opacity-20 rounded"></div>
-          <span className="text-muted-foreground">Sample trajectories</span>
+          <div className="h-0.5 w-4 bg-white opacity-15 rounded"></div>
+          <span className="text-muted-foreground/70">Sample trajectories</span>
         </div>
       </div>
 
@@ -142,51 +135,49 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
             margin={{ top: 20, right: 20, bottom: 30, left: 20 }}
           >
             <defs>
-              {/* Gradients for upper confidence bands */}
               <linearGradient id="upperP90" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity={0.05} />
+                <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity={0.03} />
               </linearGradient>
               <linearGradient id="upperP75" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity={0.5} />
-                <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity={0.1} />
+                <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity={0.08} />
               </linearGradient>
-              {/* Gradients for lower confidence bands */}
               <linearGradient id="lowerP90" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0%" stopColor="rgb(239, 68, 68)" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="rgb(239, 68, 68)" stopOpacity={0.05} />
+                <stop offset="0%" stopColor="rgb(239, 68, 68)" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="rgb(239, 68, 68)" stopOpacity={0.03} />
               </linearGradient>
               <linearGradient id="lowerP75" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0%" stopColor="rgb(239, 68, 68)" stopOpacity={0.5} />
-                <stop offset="100%" stopColor="rgb(239, 68, 68)" stopOpacity={0.1} />
+                <stop offset="0%" stopColor="rgb(239, 68, 68)" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="rgb(239, 68, 68)" stopOpacity={0.08} />
               </linearGradient>
             </defs>
 
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.05)"
+              stroke="rgba(255,255,255,0.03)"
               horizontal={true}
               vertical={false}
             />
 
             <XAxis
               dataKey="week"
-              tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.5)' }}
-              axisLine={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1 }}
+              tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
+              axisLine={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
               tickLine={false}
             >
               <Label
                 value="Time Horizon (weeks)"
                 position="insideBottom"
                 offset={-18}
-                style={{ fontSize: 10, fill: 'rgba(255,255,255,0.5)' }}
+                style={{ fontSize: 10, fill: 'rgba(255,255,255,0.35)' }}
               />
             </XAxis>
 
             <YAxis
               domain={[-maxDeviation * 1.1, maxDeviation * 1.1]}
-              tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.5)' }}
-              axisLine={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1 }}
+              tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
+              axisLine={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
               tickLine={false}
               tickFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(0)}%`}
             >
@@ -195,29 +186,28 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
                 angle={-90}
                 position="insideLeft"
                 offset={10}
-                style={{ fontSize: 10, fill: 'rgba(255,255,255,0.5)', textAnchor: 'middle' }}
+                style={{ fontSize: 10, fill: 'rgba(255,255,255,0.35)', textAnchor: 'middle' }}
               />
             </YAxis>
 
             <Tooltip
               contentStyle={{
                 backgroundColor: 'rgba(15, 15, 25, 0.95)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '12px',
                 fontSize: '10px',
-                backdropFilter: 'blur(12px)',
-                padding: '8px',
+                backdropFilter: 'blur(16px)',
+                padding: '8px 12px',
               }}
               formatter={(value: any) => [`${Number(value) > 0 ? '+' : ''}${Number(value).toFixed(1)}%`]}
               labelFormatter={(label) => `Week ${label}`}
             />
 
-            {/* Upper confidence bands (optimistic scenarios) */}
             <Area
               type="monotone"
               dataKey="p90Upper"
-              stroke="rgba(59, 130, 246, 0.6)"
-              strokeWidth={1.5}
+              stroke="rgba(59, 130, 246, 0.4)"
+              strokeWidth={1}
               fill="url(#upperP90)"
               isAnimationActive={true}
               animationDuration={1200}
@@ -225,19 +215,18 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
             <Area
               type="monotone"
               dataKey="p75Upper"
-              stroke="rgba(59, 130, 246, 0.8)"
-              strokeWidth={1.5}
+              stroke="rgba(59, 130, 246, 0.6)"
+              strokeWidth={1}
               fill="url(#upperP75)"
               isAnimationActive={true}
               animationDuration={1200}
             />
 
-            {/* Lower confidence bands (pessimistic scenarios) */}
             <Area
               type="monotone"
               dataKey="p90Lower"
-              stroke="rgba(239, 68, 68, 0.6)"
-              strokeWidth={1.5}
+              stroke="rgba(239, 68, 68, 0.4)"
+              strokeWidth={1}
               fill="url(#lowerP90)"
               isAnimationActive={true}
               animationDuration={1200}
@@ -245,8 +234,8 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
             <Area
               type="monotone"
               dataKey="p75Lower"
-              stroke="rgba(239, 68, 68, 0.8)"
-              strokeWidth={1.5}
+              stroke="rgba(239, 68, 68, 0.6)"
+              strokeWidth={1}
               fill="url(#lowerP75)"
               isAnimationActive={true}
               animationDuration={1200}
@@ -258,19 +247,18 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
                 key={i}
                 type="monotone"
                 dataKey={`path${i}`}
-                stroke={`rgba(255,255,255,${0.08 + i * 0.01})`}
-                strokeWidth={0.8}
+                stroke={`rgba(255,255,255,${0.06 + i * 0.008})`}
+                strokeWidth={0.7}
                 dot={false}
                 isAnimationActive={true}
                 animationDuration={1000 + i * 100}
               />
             ))}
 
-            {/* Median centerline */}
             <ReferenceLine
               y={0}
               stroke="var(--primary)"
-              strokeWidth={2.5}
+              strokeWidth={2}
               label={{
                 value: 'Median Path (P50)',
                 position: 'insideTopRight',
@@ -280,17 +268,16 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
               }}
             />
 
-            {/* Deadline vertical line */}
             <ReferenceLine
               x={deadline}
-              stroke="rgba(234, 179, 8, 0.9)"
-              strokeWidth={2}
+              stroke="rgba(234, 179, 8, 0.8)"
+              strokeWidth={1.5}
               strokeDasharray="5 5"
               label={{
                 value: `Target: ${deadline}w`,
                 position: 'top',
                 fontSize: 10,
-                fill: 'rgba(234, 179, 8, 1)',
+                fill: 'rgba(234, 179, 8, 0.9)',
                 offset: 10,
               }}
             />
@@ -299,43 +286,43 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
       </div>
 
       {/* Statistical Summary */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 p-3">
-          <div className="text-[10px] text-blue-400 mb-1">Optimistic (Early)</div>
+      <div className="grid grid-cols-3 gap-2.5 mb-4">
+        <div className="rounded-xl bg-gradient-to-br from-blue-500/8 to-blue-500/3 ring-1 ring-blue-500/15 p-3">
+          <div className="text-[10px] text-blue-400/80 mb-1">Optimistic (Early)</div>
           <div className="text-sm font-semibold tabular-nums text-foreground">
             P10: {Math.max(1, p50 - (p90 - p50) * 0.8).toFixed(1)}w
           </div>
-          <div className="text-[9px] text-muted-foreground mt-0.5">10% finish earlier</div>
+          <div className="text-[9px] text-muted-foreground/60 mt-0.5">10% finish earlier</div>
         </div>
 
-        <div className="rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-3">
-          <div className="text-[10px] text-primary mb-1">Median (Expected)</div>
+        <div className="rounded-xl bg-gradient-to-br from-primary/8 to-primary/3 ring-1 ring-primary/15 p-3">
+          <div className="text-[10px] text-primary/80 mb-1">Median (Expected)</div>
           <div className="text-sm font-semibold tabular-nums text-foreground">
             P50: {p50}w
           </div>
-          <div className="text-[9px] text-muted-foreground mt-0.5">50% probability</div>
+          <div className="text-[9px] text-muted-foreground/60 mt-0.5">50% probability</div>
         </div>
 
-        <div className="rounded-lg bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-500/20 p-3">
-          <div className="text-[10px] text-red-400 mb-1">Pessimistic (Late)</div>
+        <div className="rounded-xl bg-gradient-to-br from-red-500/8 to-red-500/3 ring-1 ring-red-500/15 p-3">
+          <div className="text-[10px] text-red-400/80 mb-1">Pessimistic (Late)</div>
           <div className="text-sm font-semibold tabular-nums text-foreground">
             P90: {p90}w
           </div>
-          <div className="text-[9px] text-muted-foreground mt-0.5">90% confidence</div>
+          <div className="text-[9px] text-muted-foreground/60 mt-0.5">90% confidence</div>
         </div>
       </div>
 
       {/* Interpretation */}
-      <div className="rounded-lg bg-secondary/10 p-3">
-        <div className="text-[10px] font-medium text-muted-foreground mb-1.5">
+      <div className="rounded-xl bg-secondary/10 p-3.5 ring-1 ring-border/10">
+        <div className="text-[10px] font-medium text-muted-foreground/70 mb-1.5">
           Chart Interpretation
         </div>
-        <div className="text-xs text-foreground space-y-1">
+        <div className="text-[11px] text-foreground/90 space-y-1">
           <div>
-            • <span className="text-blue-400">Blue bands (above)</span>: Optimistic scenarios - project completes faster than median
+            • <span className="text-blue-400/90">Blue bands (above)</span>: Optimistic scenarios - project completes faster than median
           </div>
           <div>
-            • <span className="text-red-400">Red bands (below)</span>: Pessimistic scenarios - project takes longer than median
+            • <span className="text-red-400/90">Red bands (below)</span>: Pessimistic scenarios - project takes longer than median
           </div>
           <div>
             • <strong>Symmetric fan spread</strong> shows uncertainty growing over time in both directions
@@ -344,8 +331,8 @@ export function FanChart({ p50, p90, deadline, numSimulations, complexity, teamS
             • <strong>Narrower bands</strong> = higher confidence • <strong>Wider bands</strong> = more uncertainty
           </div>
           {deadline < p50 && (
-            <div className="text-destructive mt-2 pt-2 border-t border-destructive/20">
-              ⚠ Target deadline ({deadline}w) falls below median path - high risk of delay
+            <div className="text-destructive mt-2 pt-2 border-t border-destructive/15">
+              Target deadline ({deadline}w) falls below median path - high risk of delay
             </div>
           )}
         </div>

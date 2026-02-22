@@ -74,36 +74,37 @@ def calculate_risk_scores(request: SimulationRequest, base_effort: dict) -> Risk
 def calculate_team_stress_index(request: SimulationRequest, base_effort: dict, mc_results: dict) -> int:
     """
     Calculate team stress index (0-100) from timeline compression, role overload, etc.
+    All components use team_size in the denominator so that adding devs reduces stress.
     """
     total_team = base_effort["total_team_size"]
     if total_team == 0:
         return 100
-    
-    # 1. Timeline compression (work required / time available)
+
     base_days = base_effort["base_effort_days"]
-    available_days = request.deadline_weeks * 5
-    
-    if available_days == 0:
-        timeline_compression = 100
-    else:
-        work_per_week = base_days / (available_days / 5)
-        timeline_compression = min(100, int(work_per_week / total_team * 40))
-    
-    # 2. Role overload (tasks per dev vs reasonable threshold)
-    tasks_per_dev = base_days / total_team if total_team > 0 else 100
-    role_overload = min(100, int(tasks_per_dev * 2))
-    
-    # 3. Parallel task density (complexity + integrations per dev)
-    task_density = (request.complexity * 5 + request.integrations * 3) / total_team if total_team > 0 else 100
-    parallel_stress = min(100, int(task_density * 5))
-    
-    # Weighted average
+    available_days = max(1, request.deadline_weeks * 5)
+
+    # 1. Timeline compression: P50 vs deadline.
+    #    p50_ratio > 1 means team is expected to be late (very high stress).
+    p50_weeks = mc_results.get("p50_weeks", request.deadline_weeks)
+    p50_ratio = p50_weeks / request.deadline_weeks if request.deadline_weeks > 0 else 2.0
+    timeline_compression = min(100, int(p50_ratio * 80))
+
+    # 2. Role overload: dev-days required per person vs available days.
+    #    A ratio of 1.0 means each dev is working at 100% capacity — high stress.
+    tasks_per_dev = base_days / total_team
+    overload_ratio = tasks_per_dev / available_days
+    role_overload = min(100, int(overload_ratio * 100))
+
+    # 3. Parallel task density: coordination overhead per dev.
+    task_density = (request.complexity * 5 + request.integrations * 3) / total_team
+    parallel_stress = min(100, int(task_density * 4))
+
     stress_index = int(
         timeline_compression * 0.4 +
         role_overload * 0.3 +
         parallel_stress * 0.3
     )
-    
+
     return min(100, stress_index)
 
 

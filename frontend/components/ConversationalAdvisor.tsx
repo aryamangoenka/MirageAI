@@ -60,9 +60,9 @@ function buildAgentVariables(request: SimulationRequest, simulation: SimulationR
     p50_cost: simulation.p50_cost.toString(),
     p90_cost: simulation.p90_cost.toString(),
     currency: 'USD',
-    allocation_frontend: (simulation.allocation.frontend_pct * 100).toFixed(0),
-    allocation_backend: (simulation.allocation.backend_pct * 100).toFixed(0),
-    allocation_devops: (simulation.allocation.devops_pct * 100).toFixed(0),
+    allocation_frontend: Math.round(simulation.allocation.frontend_pct).toString(),
+    allocation_backend: Math.round(simulation.allocation.backend_pct).toString(),
+    allocation_devops: Math.round(simulation.allocation.devops_pct).toString(),
     integrations_count: request.integrations_count.toString(),
     scope_volatility: request.scope_volatility.toString(),
   }

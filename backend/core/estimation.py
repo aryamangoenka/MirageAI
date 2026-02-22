@@ -5,11 +5,15 @@ Base effort estimation, WSCI, integration multiplier, experience variance.
 from models.schemas import SimulationRequest
 
 
-# Base effort mapping: scope x complexity -> ideal dev-days
+# Base effort mapping: scope x complexity -> TOTAL team dev-days (not per-person).
+# Calibrated for realistic teams of 3-6 people; calendar time = dev-days / team_size.
+# small ≈ 1-4 week project for a 4-person team at medium complexity.
+# medium ≈ 8-14 week project for a 4-person team at medium complexity.
+# large ≈ 20-30 week project for a 4-person team at medium complexity.
 SCOPE_BASE_DAYS = {
-    "small": {"base": 15, "complexity_multiplier": 3},
-    "medium": {"base": 30, "complexity_multiplier": 6},
-    "large": {"base": 60, "complexity_multiplier": 10},
+    "small":  {"base": 50,  "complexity_multiplier": 10},
+    "medium": {"base": 100, "complexity_multiplier": 20},
+    "large":  {"base": 200, "complexity_multiplier": 40},
 }
 
 # Weighted Stack Complexity Index (WSCI)

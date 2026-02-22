@@ -74,11 +74,11 @@ export function HeroVisual() {
 
         // Bar gradient
         const grad = ctx.createLinearGradient(x, y, x, baseY)
-        grad.addColorStop(0, "rgba(56, 189, 248, 0.8)")
-        grad.addColorStop(1, "rgba(56, 189, 248, 0.15)")
+        grad.addColorStop(0, "rgba(56, 189, 248, 0.7)")
+        grad.addColorStop(1, "rgba(56, 189, 248, 0.1)")
         ctx.fillStyle = grad
         ctx.beginPath()
-        ctx.roundRect(x + barGap / 2, y, barWidth - barGap, barH, [2, 2, 0, 0])
+        ctx.roundRect(x + barGap / 2, y, barWidth - barGap, barH, [3, 3, 0, 0])
         ctx.fill()
       })
 
@@ -86,7 +86,7 @@ export function HeroVisual() {
       const p50X = 20 + 10 * barWidth + barWidth / 2
       ctx.beginPath()
       ctx.setLineDash([4, 4])
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.5)"
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.35)"
       ctx.lineWidth = 1
       ctx.moveTo(p50X, 12)
       ctx.lineTo(p50X, baseY)
@@ -94,7 +94,7 @@ export function HeroVisual() {
       ctx.setLineDash([])
 
       // P50 label
-      ctx.fillStyle = "rgba(255, 255, 255, 0.7)"
+      ctx.fillStyle = "rgba(255, 255, 255, 0.6)"
       ctx.font = "10px Inter, system-ui, sans-serif"
       ctx.textAlign = "center"
       ctx.fillText("P50", p50X, 10)
@@ -103,18 +103,18 @@ export function HeroVisual() {
       const p90X = 20 + 16 * barWidth + barWidth / 2
       ctx.beginPath()
       ctx.setLineDash([4, 4])
-      ctx.strokeStyle = "rgba(248, 113, 113, 0.6)"
+      ctx.strokeStyle = "rgba(248, 113, 113, 0.5)"
       ctx.lineWidth = 1
       ctx.moveTo(p90X, 12)
       ctx.lineTo(p90X, baseY)
       ctx.stroke()
       ctx.setLineDash([])
 
-      ctx.fillStyle = "rgba(248, 113, 113, 0.7)"
+      ctx.fillStyle = "rgba(248, 113, 113, 0.6)"
       ctx.fillText("P90", p90X, 10)
 
       // X-axis label
-      ctx.fillStyle = "rgba(255, 255, 255, 0.3)"
+      ctx.fillStyle = "rgba(255, 255, 255, 0.2)"
       ctx.font = "9px Inter, system-ui, sans-serif"
       ctx.textAlign = "center"
       ctx.fillText("Completion Timeline (weeks)", w / 2, h - 4)
@@ -129,15 +129,18 @@ export function HeroVisual() {
   }, [mounted])
 
   if (!mounted) {
-    return <div className="h-[280px] w-full rounded-xl border border-border bg-card" />
+    return <div className="h-[280px] w-full rounded-2xl border border-border/30 bg-card/40" />
   }
 
   return (
-    <div className="relative w-full max-w-md glow-card rounded-xl border border-border bg-card/80 p-5 backdrop-blur-sm">
+    <div className="relative w-full max-w-md glass-card p-5">
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">Monte Carlo Simulation</span>
-        <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+          <span className="text-xs font-medium text-muted-foreground">Monte Carlo Simulation</span>
+        </div>
+        <span className="rounded-full bg-secondary/60 px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground/80 ring-1 ring-border/20">
           1,000 runs
         </span>
       </div>
@@ -153,15 +156,15 @@ export function HeroVisual() {
       {/* Mini metrics */}
       <div className="mb-4 flex gap-4">
         <div className="flex flex-col">
-          <span className="text-[10px] text-muted-foreground">P50</span>
+          <span className="text-[10px] text-muted-foreground/60">P50</span>
           <span className="text-sm font-medium tabular-nums text-foreground">14.2w</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[10px] text-muted-foreground">P90</span>
+          <span className="text-[10px] text-muted-foreground/60">P90</span>
           <span className="text-sm font-medium tabular-nums text-foreground">21.7w</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[10px] text-muted-foreground">Overrun</span>
+          <span className="text-[10px] text-muted-foreground/60">Overrun</span>
           <span className="text-sm font-medium tabular-nums text-destructive">+18d</span>
         </div>
       </div>
@@ -174,7 +177,7 @@ export function HeroVisual() {
       />
 
       {/* Subtle glow accent at top */}
-      <div className="pointer-events-none absolute -top-px left-1/2 h-px w-3/4 -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+      <div className="pointer-events-none absolute -top-px left-1/2 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
     </div>
   )
 }

@@ -14,7 +14,8 @@ def run_monte_carlo(request: SimulationRequest, base_effort: dict) -> dict:
     n_simulations = request.num_simulations
     base_days = base_effort["base_effort_days"]
     scope_volatility = base_effort["scope_volatility_factor"]
-    
+    team_size = max(1, base_effort["total_team_size"])
+
     # Initialize results array
     completion_days = np.zeros(n_simulations)
     
@@ -47,9 +48,12 @@ def run_monte_carlo(request: SimulationRequest, base_effort: dict) -> dict:
         unexpected_factor = np.random.lognormal(0.0, 0.12)
         unexpected_factor = min(1.3, unexpected_factor)
         
-        # Compute this run's duration
-        run_days = base_days * scope_growth * integration_delay_factor * experience_variance * unexpected_factor
-        completion_days[i] = run_days
+        # Compute this run's total dev-days effort, then convert to calendar days
+        # by dividing by team_size (how many people work in parallel).
+        effort_days = base_days * scope_growth * integration_delay_factor * experience_variance * unexpected_factor
+        calendar_days = effort_days / team_size
+        completion_days[i] = calendar_days
+
     
     # Convert days to weeks (5 work days per week)
     completion_weeks = completion_days / 5.0

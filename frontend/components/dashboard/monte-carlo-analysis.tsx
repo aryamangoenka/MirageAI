@@ -31,20 +31,16 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
 
   // Calculate statistics
   const stats = useMemo(() => {
-    // Calculate weighted mean
     const totalCount = data.reduce((sum, d) => sum + d.frequency, 0)
     const mean = data.reduce((sum, d) => sum + d.week * d.frequency, 0) / totalCount
 
-    // Calculate standard deviation
     const variance = data.reduce((sum, d) =>
       sum + Math.pow(d.week - mean, 2) * d.frequency, 0
     ) / totalCount
     const stdDev = Math.sqrt(variance)
 
-    // Find mode (most frequent value)
     const mode = data.reduce((max, d) => d.frequency > max.frequency ? d : max).week
 
-    // Calculate percentiles
     let cumulative = 0
     const percentiles: Record<number, number> = {}
     const sortedData = [...data].sort((a, b) => a.week - b.week)
@@ -61,11 +57,9 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
       if (!percentiles[95] && percentile >= 95) percentiles[95] = d.week
     }
 
-    // Calculate confidence intervals (95% CI)
     const ci95Lower = mean - 1.96 * stdDev
     const ci95Upper = mean + 1.96 * stdDev
 
-    // Calculate skewness
     const skewness = data.reduce((sum, d) =>
       sum + Math.pow((d.week - mean) / stdDev, 3) * d.frequency, 0
     ) / totalCount
@@ -117,24 +111,27 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
   }, [cdfData, normalDistribution])
 
   return (
-    <div className="glow-card rounded-xl border border-border bg-card/60 p-6 backdrop-blur-sm">
+    <div className="glass-card p-5">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Monte Carlo Analysis
-          </h3>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {numSimulations.toLocaleString()} simulation runs
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+          <div>
+            <h3 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Monte Carlo Analysis
+            </h3>
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+              {numSimulations.toLocaleString()} simulation runs
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1 rounded-xl border border-border/40 bg-secondary/20 p-0.5">
           <button
             onClick={() => setActiveTab('pdf')}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all duration-300 ${
               activeTab === 'pdf'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-muted-foreground hover:text-foreground'
+                ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <BarChart3 className="h-3 w-3" />
@@ -142,10 +139,10 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
           </button>
           <button
             onClick={() => setActiveTab('cdf')}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all duration-300 ${
               activeTab === 'cdf'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-muted-foreground hover:text-foreground'
+                ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <TrendingUp className="h-3 w-3" />
@@ -156,40 +153,27 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
 
       {/* Statistics Panel */}
       <div className="mb-4 grid grid-cols-4 gap-2">
-        <div className="rounded-lg bg-secondary/30 px-3 py-2">
-          <div className="text-[10px] text-muted-foreground">Mean (μ)</div>
-          <div className="text-sm font-semibold tabular-nums text-foreground">
-            {stats.mean.toFixed(1)}w
+        {[
+          { label: 'Mean (μ)', value: `${stats.mean.toFixed(1)}w` },
+          { label: 'Std Dev (σ)', value: `${stats.stdDev.toFixed(1)}w` },
+          { label: 'Mode', value: `${stats.mode}w` },
+          { label: 'Skewness', value: stats.skewness.toFixed(2) },
+        ].map((stat, i) => (
+          <div key={stat.label} className="animate-scale-in rounded-xl bg-secondary/20 px-3 py-2 ring-1 ring-border/20" style={{ animationDelay: `${i * 60}ms` }}>
+            <div className="text-[10px] text-muted-foreground/70">{stat.label}</div>
+            <div className="text-sm font-semibold tabular-nums text-foreground">{stat.value}</div>
           </div>
-        </div>
-        <div className="rounded-lg bg-secondary/30 px-3 py-2">
-          <div className="text-[10px] text-muted-foreground">Std Dev (σ)</div>
-          <div className="text-sm font-semibold tabular-nums text-foreground">
-            {stats.stdDev.toFixed(1)}w
-          </div>
-        </div>
-        <div className="rounded-lg bg-secondary/30 px-3 py-2">
-          <div className="text-[10px] text-muted-foreground">Mode</div>
-          <div className="text-sm font-semibold tabular-nums text-foreground">
-            {stats.mode}w
-          </div>
-        </div>
-        <div className="rounded-lg bg-secondary/30 px-3 py-2">
-          <div className="text-[10px] text-muted-foreground">Skewness</div>
-          <div className="text-sm font-semibold tabular-nums text-foreground">
-            {stats.skewness.toFixed(2)}
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Confidence Interval */}
-      <div className="mb-4 rounded-lg bg-secondary/20 px-3 py-2">
-        <div className="text-[10px] text-muted-foreground mb-1">
+      <div className="mb-4 rounded-xl bg-secondary/15 px-3 py-2.5 ring-1 ring-border/15">
+        <div className="text-[10px] text-muted-foreground/70 mb-1">
           95% Confidence Interval
         </div>
-        <div className="text-xs text-foreground">
+        <div className="text-[11px] text-foreground">
           [{stats.ci95Lower.toFixed(1)}w, {stats.ci95Upper.toFixed(1)}w]
-          <span className="ml-2 text-muted-foreground">
+          <span className="ml-2 text-muted-foreground/60">
             (±{(1.96 * stats.stdDev).toFixed(1)}w from mean)
           </span>
         </div>
@@ -200,40 +184,41 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
         <ResponsiveContainer width="100%" height="100%">
           {activeTab === 'pdf' ? (
             <ComposedChart data={chartData} margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis
                 dataKey="week"
-                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.5)' }}
-                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
+                axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
                 tickLine={false}
               >
                 <Label
                   value="Timeline (weeks)"
                   position="insideBottom"
                   offset={-10}
-                  style={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
+                  style={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }}
                 />
               </XAxis>
               <YAxis
                 yAxisId="left"
-                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.5)' }}
-                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
+                axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
                 tickLine={false}
               >
                 <Label
                   value="Frequency (%)"
                   angle={-90}
                   position="insideLeft"
-                  style={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
+                  style={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }}
                 />
               </YAxis>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgba(20, 20, 30, 0.95)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
+                  backgroundColor: 'rgba(15, 15, 25, 0.95)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '12px',
                   fontSize: '11px',
-                  backdropFilter: 'blur(12px)',
+                  backdropFilter: 'blur(16px)',
+                  padding: '8px 12px',
                 }}
                 formatter={(value: any, name: string) => {
                   if (name === 'normalizedFrequency') return [`${Number(value).toFixed(2)}%`, 'Observed']
@@ -249,16 +234,18 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
                 yAxisId="left"
                 dataKey="normalizedFrequency"
                 fill="var(--primary)"
-                fillOpacity={0.7}
-                radius={[3, 3, 0, 0]}
+                fillOpacity={0.6}
+                radius={[4, 4, 0, 0]}
                 name="Observed Distribution"
+                isAnimationActive={true}
+                animationDuration={800}
               />
               <Line
                 yAxisId="left"
                 type="monotone"
                 dataKey="normalDist"
-                stroke="rgba(255,255,255,0.6)"
-                strokeWidth={2}
+                stroke="rgba(255,255,255,0.4)"
+                strokeWidth={1.5}
                 strokeDasharray="5 5"
                 dot={false}
                 name="Normal Distribution"
@@ -266,80 +253,81 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
               <ReferenceLine
                 x={p50}
                 yAxisId="left"
-                stroke="rgba(59, 130, 246, 0.8)"
-                strokeWidth={2}
+                stroke="rgba(59, 130, 246, 0.7)"
+                strokeWidth={1.5}
                 strokeDasharray="4 4"
                 label={{
                   value: `P50: ${p50}w`,
                   position: 'top',
                   fontSize: 10,
-                  fill: 'rgba(59, 130, 246, 1)',
+                  fill: 'rgba(59, 130, 246, 0.9)',
                 }}
               />
               <ReferenceLine
                 x={p90}
                 yAxisId="left"
-                stroke="rgba(239, 68, 68, 0.8)"
-                strokeWidth={2}
+                stroke="rgba(239, 68, 68, 0.7)"
+                strokeWidth={1.5}
                 strokeDasharray="4 4"
                 label={{
                   value: `P90: ${p90}w`,
                   position: 'top',
                   fontSize: 10,
-                  fill: 'rgba(239, 68, 68, 1)',
+                  fill: 'rgba(239, 68, 68, 0.9)',
                 }}
               />
               {deadline && (
                 <ReferenceLine
                   x={deadline}
                   yAxisId="left"
-                  stroke="rgba(234, 179, 8, 0.8)"
-                  strokeWidth={2}
+                  stroke="rgba(234, 179, 8, 0.7)"
+                  strokeWidth={1.5}
                   label={{
                     value: `Deadline: ${deadline}w`,
                     position: 'top',
                     fontSize: 10,
-                    fill: 'rgba(234, 179, 8, 1)',
+                    fill: 'rgba(234, 179, 8, 0.9)',
                   }}
                 />
               )}
             </ComposedChart>
           ) : (
             <ComposedChart data={chartData} margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis
                 dataKey="week"
-                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.5)' }}
-                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
+                axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
                 tickLine={false}
               >
                 <Label
                   value="Timeline (weeks)"
                   position="insideBottom"
                   offset={-10}
-                  style={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
+                  style={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }}
                 />
               </XAxis>
               <YAxis
                 domain={[0, 100]}
-                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.5)' }}
-                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
+                axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
                 tickLine={false}
               >
                 <Label
                   value="Cumulative Probability (%)"
                   angle={-90}
                   position="insideLeft"
-                  style={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
+                  style={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }}
                 />
               </YAxis>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgba(20, 20, 30, 0.95)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
+                  backgroundColor: 'rgba(15, 15, 25, 0.95)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '12px',
                   fontSize: '11px',
-                  backdropFilter: 'blur(12px)',
+                  backdropFilter: 'blur(16px)',
+                  padding: '8px 12px',
                 }}
                 formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Probability']}
               />
@@ -347,55 +335,55 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
                 type="monotone"
                 dataKey="cumulativeProbability"
                 fill="var(--primary)"
-                fillOpacity={0.3}
+                fillOpacity={0.2}
                 stroke="var(--primary)"
-                strokeWidth={3}
+                strokeWidth={2.5}
                 name="Cumulative Distribution"
               />
               <ReferenceLine
                 x={p50}
-                stroke="rgba(59, 130, 246, 0.8)"
-                strokeWidth={2}
+                stroke="rgba(59, 130, 246, 0.7)"
+                strokeWidth={1.5}
                 strokeDasharray="4 4"
                 label={{
                   value: `P50: ${p50}w (50%)`,
                   position: 'topRight',
                   fontSize: 10,
-                  fill: 'rgba(59, 130, 246, 1)',
+                  fill: 'rgba(59, 130, 246, 0.9)',
                 }}
               />
               <ReferenceLine
                 x={p90}
-                stroke="rgba(239, 68, 68, 0.8)"
-                strokeWidth={2}
+                stroke="rgba(239, 68, 68, 0.7)"
+                strokeWidth={1.5}
                 strokeDasharray="4 4"
                 label={{
                   value: `P90: ${p90}w (90%)`,
                   position: 'topRight',
                   fontSize: 10,
-                  fill: 'rgba(239, 68, 68, 1)',
+                  fill: 'rgba(239, 68, 68, 0.9)',
                 }}
               />
               <ReferenceLine
                 y={50}
-                stroke="rgba(255,255,255,0.2)"
+                stroke="rgba(255,255,255,0.1)"
                 strokeDasharray="2 2"
                 label={{
                   value: '50%',
                   position: 'left',
                   fontSize: 9,
-                  fill: 'rgba(255,255,255,0.4)',
+                  fill: 'rgba(255,255,255,0.3)',
                 }}
               />
               <ReferenceLine
                 y={90}
-                stroke="rgba(255,255,255,0.2)"
+                stroke="rgba(255,255,255,0.1)"
                 strokeDasharray="2 2"
                 label={{
                   value: '90%',
                   position: 'left',
                   fontSize: 9,
-                  fill: 'rgba(255,255,255,0.4)',
+                  fill: 'rgba(255,255,255,0.3)',
                 }}
               />
             </ComposedChart>
@@ -404,11 +392,11 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
       </div>
 
       {/* Percentiles Table */}
-      <div className="grid grid-cols-6 gap-2">
-        {[10, 25, 50, 75, 90, 95].map(p => (
-          <div key={p} className="rounded-lg bg-secondary/20 px-2 py-1.5 text-center">
-            <div className="text-[9px] text-muted-foreground">P{p}</div>
-            <div className="text-xs font-semibold tabular-nums text-foreground">
+      <div className="grid grid-cols-6 gap-1.5">
+        {[10, 25, 50, 75, 90, 95].map((p, i) => (
+          <div key={p} className="animate-scale-in rounded-xl bg-secondary/15 px-2 py-1.5 text-center ring-1 ring-border/10" style={{ animationDelay: `${i * 50}ms` }}>
+            <div className="text-[9px] text-muted-foreground/60">P{p}</div>
+            <div className="text-[11px] font-semibold tabular-nums text-foreground">
               {stats.percentiles[p]?.toFixed(1) || '-'}w
             </div>
           </div>
@@ -416,11 +404,11 @@ export function MonteCarloAnalysis({ data, p50, p90, deadline, numSimulations }:
       </div>
 
       {/* Interpretation */}
-      <div className="mt-4 rounded-lg bg-secondary/10 p-3">
-        <div className="text-[10px] font-medium text-muted-foreground mb-1">
+      <div className="mt-4 rounded-xl bg-secondary/10 p-3.5 ring-1 ring-border/10">
+        <div className="text-[10px] font-medium text-muted-foreground/70 mb-1.5">
           Statistical Interpretation
         </div>
-        <div className="text-xs text-foreground space-y-1">
+        <div className="text-[11px] text-foreground/90 space-y-1">
           <div>
             • <strong>{stats.percentiles[50]?.toFixed(1)}w</strong> median completion
             (50% chance of finishing earlier)
