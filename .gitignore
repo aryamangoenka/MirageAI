@@ -1,85 +1,82 @@
-# ===================================
-# PlanSight - Git Ignore
-# Person D - DevOps Configuration
-# ===================================
+# ============================================================
+# MirageAI / PlanSight — Root .gitignore
+# ============================================================
 
-# === Environment Variables ===
+# ── Secret / Environment files ──────────────────────────────
+# Never commit real keys. Use *.example or *.template instead.
 .env
 .env.local
+.env.development
+.env.production
+.env.staging
 .env.*.local
+backend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
 
-# === Python ===
+# ── Python ──────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
+*.pyo
+*.pyd
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 venv/
-ENV/
+.venv/
 env/
-.venv
+ENV/
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
 
-# === Node / Frontend ===
+# Debug log written by backend instrumentation
+backend_debug.ndjson
+/tmp/*.ndjson
+
+# ── Node / Next.js ──────────────────────────────────────────
 node_modules/
+.next/
+out/
+.nuxt/
+.cache/
+.parcel-cache/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
-dist/
-dist-ssr/
-*.local
+pnpm-debug.log*
+*.tsbuildinfo
+.vercel
 
-# === IDE ===
-.vscode/
-.idea/
+# ── OS / Editor ─────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
 *.swp
 *.swo
 *~
-.DS_Store
+.idea/
+.vscode/settings.json
+.vscode/launch.json
 
-# === Testing ===
-.pytest_cache/
-.coverage
-htmlcov/
-testing/load_test_results.json
-
-# === Logs ===
+# ── Testing / CI ────────────────────────────────────────────
 *.log
-logs/
-
-# === Databases ===
-*.db
-*.sqlite
-*.sqlite3
-
-# === OS ===
-.DS_Store
-Thumbs.db
-
-# === Deployment ===
-.vercel
-.railway
-.render
-
-# === Temporary ===
-*.tmp
-*.temp
-.cache/
+test-results/
+playwright-report/
+coverage/
